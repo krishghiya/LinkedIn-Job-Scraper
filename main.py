@@ -12,9 +12,9 @@ PASSWORD = ''
 # Keep variable values lowercase to avoid conflicts
 
 TITLE = "software"  # Title of job you are looking for
-LOCATION = "United States"  # City, State, or Country
-EXCLUDE_KEYWORDS = ["years of", "years exp", "+ year"]  # Don't take jobs with these words in the description
-EXCLUDE_JOBS = ["intern"]  # Exclude jobs with these in the title
+LOCATION = "California, United States"  # City, State, or Country
+EXCLUDE_KEYWORDS = ["fronte", "fulls", "years of", "years exp", "+ year"]  # Don't take jobs with these words in the description
+EXCLUDE_JOBS = ["intern", "full", "front"]  # Exclude jobs with these in the title
 INCLUDE_KEYWORDS = ["python", "java", "ba ", "undergrad"]  # Include jobs whose description contains these words
 INCLUDE_JOBS = []  # Include jobs whose title contains these words
 JOB_TYPES = ["fulltime"]  # One of: internship, fulltime, part-time
@@ -34,24 +34,26 @@ def get_elem(attribute, tag="", value="", compare="=", multiple=False, lookup=DR
     wait = WebDriverWait(lookup, 10)
     if not multiple:
         return wait.until(ec.element_to_be_clickable((By.CSS_SELECTOR,
-                                                            tag + "[" + attribute + compare + value + "]")))
+                                                      tag + "[" + attribute + compare + value + "]")))
     return wait.until(ec.visibility_of_all_elements_located((By.CSS_SELECTOR,
                                                              tag + "[" + attribute + compare + value + "]")))
 
 
-DRIVER.get(SITE + "uas/login")
-DRIVER.add_cookie({
-    'name': 'li_at',
-    # li_at cookie value from linkedin cookies
-    'value': "",
-    'domain': '.linkedin.com'
-})
+DRIVER.get(SITE + "jobs")
+# DRIVER.add_cookie({
+#     'name': 'li_at',
+#     # li_at cookie value from linkedin cookies
+#     'value': "",
+#     'domain': '.linkedin.com'
+# })
 DRIVER.maximize_window()
-get_elem("id", value="username").send_keys(USERNAME)
+get_elem("class", value="nav__button-secondary").click()
+username = get_elem("id", value="username")
+username.clear()
+username.send_keys(USERNAME)
 password = get_elem("id", value="password")
 password.send_keys(PASSWORD)
 password.send_keys(Keys.RETURN)
-get_elem("id", value="jobs-nav-item").click()
 search_boxes = get_elem("class", value="jobs-search-box__text-input", multiple=True)
 search_boxes[0].click()
 time.sleep(1)
@@ -79,6 +81,7 @@ while not no_results and page <= PAGES:
 
     for i in jobs:
         DRIVER.execute_script("arguments[0].scrollIntoView();", i)
+        time.sleep(2)
         job_link = get_elem("href", tag="a", compare="", lookup=i)
         job_link.click()
         job_link = job_link.get_attribute("href")
@@ -100,7 +103,7 @@ while not no_results and page <= PAGES:
     DRIVER.get(url + "&start=" + str(page * 25))
     page += 1
     no_results = DRIVER.find_elements_by_class_name("jobs-search-no-results__image")
-    time.sleep(1)
+    time.sleep(2)
 
 pickle.dump(companies, open(TITLE + ".pickle", "wb"))
 DRIVER.close()

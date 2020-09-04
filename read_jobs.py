@@ -1,6 +1,6 @@
 import pickle
 
-TITLE = "machine learning"
+TITLE = "software"
 companies = pickle.load(open(TITLE + ".pickle", "rb"))
 
 for company in companies:
