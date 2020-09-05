@@ -1,9 +1,9 @@
 import pickle
 
-TITLE = "software"
+TITLE = "data scientist"
 companies = pickle.load(open(TITLE + ".pickle", "rb"))
 
+index = 0
 for company in companies:
-    print(company + "    " + companies.get(company))
-print(len(companies))
-exit()
+    print(str((index := index + 1)) + ". " + company + "    " + companies.get(company))
+
