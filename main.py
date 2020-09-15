@@ -1,5 +1,6 @@
+from collections import OrderedDict
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
@@ -12,22 +13,22 @@ PASSWORD = ''
 
 # Keep variable values lowercase to avoid conflicts
 
-TITLE = "data scientist"  # Title of job you are looking for
-LOCATION = "California, United States"  # City, State, or Country
-EXCLUDE_KEYWORDS = ["phd", "years of", "years exp", "+ year"]  # Don't take jobs with these words in the description
-EXCLUDE_JOBS = ["intern", "phd"]  # Exclude jobs with these in the title
-INCLUDE_KEYWORDS = ["python", "ba ", "undergrad"]  # Include jobs whose description contains these words
+TITLE = "software"  # Title of job you are looking for
+LOCATION = "United States"  # City, State, or Country
+EXCLUDE_KEYWORDS = ["years of", "years exp", "+ year", "of experience"]  # Exclude jobs with these words in description
+EXCLUDE_JOBS = ["intern", "full"]  # Exclude jobs with these in the title
+INCLUDE_KEYWORDS = ["ba ", "undergrad", " b.", "bs", "java", "python"]  # Include jobs with these words in description
 INCLUDE_JOBS = []  # Include jobs whose title contains these words
 JOB_TYPES = ["fulltime"]  # One of: internship, fulltime, part-time
-PAGES = 40  # Number of jobs (PAGES * 25) to scan. Set to 100
+PAGES = 40  # Number of jobs (PAGES * 25) to scan. Max 40
 SITE = "https://www.linkedin.com/"
 DRIVER = webdriver.Edge(r'C:\Program Files (x86)\Microsoft\Edge\Application\msedgedriver.exe')
 
-companies = {}
+companies = OrderedDict()
 
 try:
     companies = pickle.load(open(TITLE + ".pickle", "rb"))
-except (OSError, IOError) as _:
+except (OSError, IOError):
     pickle.dump(companies, open(TITLE + ".pickle", "wb"))
 
 
@@ -79,7 +80,12 @@ no_results = []
 time.sleep(1)
 
 while not no_results and page <= PAGES:
-    jobs = get_elem("data-test-search-two-pane-search-result-item", value="true", multiple=True)
+    try:
+        jobs = get_elem("data-test-search-two-pane-search-result-item", value="true", multiple=True)
+    except TimeoutException:
+        print("Site crashed, saving data...")
+        break
+
     next_page = None
     count = 0
 
@@ -100,8 +106,10 @@ while not no_results and page <= PAGES:
 
             if not any(s in description for s in EXCLUDE_KEYWORDS) and \
                     any(s in description for s in INCLUDE_KEYWORDS):
-                count += 1
-                companies.update({job_info[0] + "--" + job_info[2]: job_link})
+                job_pair = job_info[0] + "--" + job_info[2]
+                if job_pair not in companies:
+                    count += 1
+                    companies.update({job_pair: job_link})
 
         print("Page " + str(page) + " complete. Found " + str(count) + " jobs.")
         DRIVER.get(url + "&start=" + str(page * 25))
@@ -109,8 +117,9 @@ while not no_results and page <= PAGES:
         no_results = DRIVER.find_elements_by_class_name("jobs-search-no-results__image")
         time.sleep(1)
 
-    except TimeoutException:
+    except (TimeoutException, StaleElementReferenceException):
         print('Timed out, retrying page')
 
+print('Search completed')
 pickle.dump(companies, open(TITLE + ".pickle", "wb"))
 DRIVER.close()
