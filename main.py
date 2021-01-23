@@ -14,18 +14,19 @@ PASSWORD = ''
 
 # Keep variable values lowercase to avoid conflicts
 
-TITLE = "machine learning"  # Title of job you are looking for
+TITLE = "software"  # Title of job you are looking for
 LOCATION = "United States"  # City, State, or Country
 EXCLUDE_KEYWORDS = []  # Exclude jobs with these words in description
 EXCLUDE_JOBS = ["full", "ops"]  # Exclude jobs with these in the title
-INCLUDE_KEYWORDS = [["ba ", "undergrad", "bachelor", " b.", "bs"], ["java", "python"]]  # Include jobs with these words in description
+INCLUDE_KEYWORDS = [["ba ", "undergrad", "bachelor", " b.", "bs "],
+                    ["java,", "java ", "python"]]  # Include jobs with these words in description
 INCLUDE_JOBS = []  # Include jobs whose title contains these words
-JOB_TYPES = ["fulltime", "internship"]  # Any of: internship, fulltime, part-time
+JOB_TYPES = ["F", "I"]  # Any capital first letter of: internship, fulltime, part-time
 JOB_LEVELS = [1, 2]  # 1 for Internship and 2 for Entry-Level
-JOB_DATES = [3600*24*7]  # 3600 * 24 * [1 for a day, 7 for a week, 30 for a month]
-PAGES = 5  # Number of jobs (PAGES * 25) to scan. Max 40
+JOB_DATES = [3600 * 24 * 7]  # 3600 * 24 * [1 for a day, 7 for a week, 30 for a month]
+PAGES = 40  # Number of jobs (PAGES * 25) to scan. Max 40
+DRIVER = webdriver.Chrome(r'')  # Path to chromedriver.exe. Get if missing
 SITE = "https://www.linkedin.com/"
-DRIVER = webdriver.Chrome(r'C:\Program Files (x86)\Google\chromedriver.exe')
 
 companies = OrderedDict()
 
@@ -71,33 +72,26 @@ search.clear()
 search.send_keys(LOCATION)
 search.send_keys(Keys.RETURN)
 
+
+def filter(box_val, opt_val, arr):
+    box = get_elem("aria-controls", value=box_val)
+    box.click()
+
+    for opt in arr:
+        get_elem("for", value=opt_val + str(opt), lookup=DRIVER).click()
+
+    get_elem("class", value="msg-overlay-bubble-header", compare="*=", lookup=DRIVER).click()
+    time.sleep(1)
+
+
 # Job Type Filter
-job_type = get_elem("aria-controls", value="job-type-facet-values")
-job_type.click()
-
-for job in JOB_TYPES:
-    get_elem("for", value="jobType-" + job[0].upper(), lookup=DRIVER).click()
-
-get_elem("class", value="msg-overlay-bubble-header", compare="*=", lookup=DRIVER).click()
+filter("job-type-facet-values", "jobType-", JOB_TYPES)
 
 # Job Level Filter
-job_level = get_elem("aria-controls", value="experience-level-facet-values")
-job_level.click()
-
-for level in JOB_LEVELS:
-    get_elem("for", value="experience-" + str(level), lookup=DRIVER).click()
-
-get_elem("class", value="msg-overlay-bubble-header", compare="=", lookup=DRIVER).click()
+filter("experience-level-facet-values", "experience-", JOB_LEVELS)
 
 # Date Posted Filter
-job_date = get_elem("aria-controls", value="date-posted-facet-values")
-job_date.click()
-
-for date in JOB_DATES:
-    get_elem("for", value="timePostedRange-r" + str(date), lookup=DRIVER).click()
-
-# Apply filter(s)
-get_elem("class", value="msg-overlay-bubble-header", compare="=", lookup=DRIVER).click()
+filter("date-posted-facet-values", "timePostedRange-r", JOB_DATES)
 
 url = DRIVER.current_url
 page = 1
