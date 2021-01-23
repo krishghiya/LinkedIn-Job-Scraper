@@ -7,20 +7,23 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 import pickle
 import time
+import re
 
 USERNAME = ''
 PASSWORD = ''
 
 # Keep variable values lowercase to avoid conflicts
 
-TITLE = ""  # Title of job you are looking for
+TITLE = "machine learning"  # Title of job you are looking for
 LOCATION = "United States"  # City, State, or Country
 EXCLUDE_KEYWORDS = []  # Exclude jobs with these words in description
-EXCLUDE_JOBS = []  # Exclude jobs with these in the title
-INCLUDE_KEYWORDS = [[], []]  # Include jobs with these words in description
+EXCLUDE_JOBS = ["full", "ops"]  # Exclude jobs with these in the title
+INCLUDE_KEYWORDS = [["ba ", "undergrad", "bachelor", " b.", "bs"], ["java", "python"]]  # Include jobs with these words in description
 INCLUDE_JOBS = []  # Include jobs whose title contains these words
-JOB_TYPES = ["fulltime"]  # One of: internship, fulltime, part-time
-PAGES = 40  # Number of jobs (PAGES * 25) to scan. Max 40
+JOB_TYPES = ["fulltime", "internship"]  # Any of: internship, fulltime, part-time
+JOB_LEVELS = [1, 2]  # 1 for Internship and 2 for Entry-Level
+JOB_DATES = [3600*24*7]  # 3600 * 24 * [1 for a day, 7 for a week, 30 for a month]
+PAGES = 5  # Number of jobs (PAGES * 25) to scan. Max 40
 SITE = "https://www.linkedin.com/"
 DRIVER = webdriver.Chrome(r'C:\Program Files (x86)\Google\chromedriver.exe')
 
@@ -47,8 +50,7 @@ DRIVER.get(SITE + "jobs")
 DRIVER.add_cookie({
     'name': 'li_at',
     # To avoid crashes use a new value every session
-    'value': "AQEDASWTK4wEgkUkAAABdy1TwmIAAAF3UWBGYk4AJlUlYsB-UWGZSmwlR7TcmRGCxt9R4k88BtnGkYson1"
-             "eQTzAahkzwDy6_oAzHESO3TvigQjVodQpe8WD_I4637DKQFoCHotZEaYD37h8uNVWYdu3s",
+    'value': "",
     'domain': '.linkedin.com'
 })
 
@@ -68,13 +70,35 @@ search = search_boxes[1]
 search.clear()
 search.send_keys(LOCATION)
 search.send_keys(Keys.RETURN)
+
+# Job Type Filter
 job_type = get_elem("aria-controls", value="job-type-facet-values")
 job_type.click()
 
 for job in JOB_TYPES:
     get_elem("for", value="jobType-" + job[0].upper(), lookup=DRIVER).click()
 
+get_elem("class", value="msg-overlay-bubble-header", compare="*=", lookup=DRIVER).click()
+
+# Job Level Filter
+job_level = get_elem("aria-controls", value="experience-level-facet-values")
+job_level.click()
+
+for level in JOB_LEVELS:
+    get_elem("for", value="experience-" + str(level), lookup=DRIVER).click()
+
 get_elem("class", value="msg-overlay-bubble-header", compare="=", lookup=DRIVER).click()
+
+# Date Posted Filter
+job_date = get_elem("aria-controls", value="date-posted-facet-values")
+job_date.click()
+
+for date in JOB_DATES:
+    get_elem("for", value="timePostedRange-r" + str(date), lookup=DRIVER).click()
+
+# Apply filter(s)
+get_elem("class", value="msg-overlay-bubble-header", compare="=", lookup=DRIVER).click()
+
 url = DRIVER.current_url
 page = 1
 no_results = []
@@ -105,9 +129,12 @@ while not no_results and page <= PAGES:
                 continue
 
             description = get_elem("id", value="job-details").text.lower()
+            pattern = re.compile("[3-9+] year")
 
             if not any(s in description for s in EXCLUDE_KEYWORDS) and \
-                    all(any(s in description for s in arr) for arr in INCLUDE_KEYWORDS):
+                    all(any(s in description for s in arr) for arr in INCLUDE_KEYWORDS) and \
+                    not pattern.search(description):
+
                 job_pair = job_info[0] + "--" + job_info[2]
                 if job_pair not in companies:
                     count += 1
